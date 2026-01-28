@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <exception>
 #include <memory>
@@ -18,19 +19,34 @@ public:
     }
   }
 
-  ~SPSCQueue() {
-    while (!empty()) {
-      // destruct elements before deallocating
-      buff_[readIdx_ & mask_].~T();
-      ++readIdx_;
-    }
+  ~SPSCQueue() noexcept {
+    // assume objects are copyable
     std::allocator_traits<Alloc>::deallocate(allocator_, buff_, capacity_);
   }
 
-  std::size_t size() const { return writeIdx_ - readIdx_; }
-  bool empty() const { return size() == 0; }
+  // non-copyable queue
+  SPSCQueue(const SPSCQueue &) = delete;
+  SPSCQueue &operator=(const SPSCQueue &) = delete;
 
-  // TODO: push and pop
+  std::size_t size() const noexcept { return writeIdx_ - readIdx_; }
+  bool empty() const noexcept { return size() == 0; }
+  std::size_t capacity() const noexcept { return capacity_; }
+  bool full() const noexcept { return size() == capacity(); }
+
+  bool push(const T &val) noexcept {
+    if (full())
+      return false;
+    buff_[writeIdx_ & mask_] = val;
+    ++writeIdx_;
+    return true;
+  }
+
+  bool pop() noexcept {
+    if (empty())
+      return false;
+    ++readIdx_;
+    return true;
+  }
 
 private:
   // power of two capacity for easy modulo calculation
