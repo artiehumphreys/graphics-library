@@ -1,9 +1,10 @@
 #pragma once
 
-#include <algorithm>
 #include <cstddef>
+#include <cstring>
 #include <exception>
 #include <memory>
+#include <optional>
 
 template <typename T, typename Alloc = std::allocator<T>> class SPSCQueue {
 
@@ -30,13 +31,20 @@ public:
 
   std::size_t size() const noexcept { return writeIdx_ - readIdx_; }
   bool empty() const noexcept { return size() == 0; }
-  std::size_t capacity() const noexcept { return capacity_; }
+  std::size_t capacity() const noexcept { return writeIdx_ == readIdx_; }
   bool full() const noexcept { return size() == capacity(); }
+
+  const T *front() const noexcept {
+    if (empty())
+      return nullptr;
+
+    return &buff_[readIdx_ & mask_];
+  }
 
   bool push(const T &val) noexcept {
     if (full())
       return false;
-    buff_[writeIdx_ & mask_] = val;
+    std::memcpy(&buff_[writeIdx_ & mask_], &val, sizeof(T));
     ++writeIdx_;
     return true;
   }

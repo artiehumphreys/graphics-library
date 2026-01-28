@@ -12,4 +12,6 @@ add_executable(driver ./main.cpp)
 add_library(spscqueue INTERFACE)
 target_include_directories(spscqueue INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/spsc-queue)
 
-# target_link_libraries(<file> PRIVATE spscqueue)
+add_executable(test_spsc_queue tests/include/test_spsc_queue.cpp)
+target_link_libraries(test_spsc_queue PRIVATE spscqueue)
+add_test(NAME test_spsc_queue COMMAND test_spsc_queue)
