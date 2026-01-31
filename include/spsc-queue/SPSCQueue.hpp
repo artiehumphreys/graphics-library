@@ -1,10 +1,10 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstring>
 #include <exception>
 #include <memory>
-#include <optional>
 
 template <typename T, typename Alloc = std::allocator<T>> class SPSCQueue {
 
@@ -14,6 +14,7 @@ public:
       : capacity_(capacity_pow2), mask_(capacity_pow2 - 1),
         allocator_(allocator),
         buff_(std::allocator_traits<Alloc>::allocate(allocator_, capacity_)) {
+    static_assert(std::atomic_size_t::is_always_lock_free);
     if (capacity_ == 0 || (capacity_ & (capacity_ - 1)) != 0) {
       // TODO: handle gracefully
       std::terminate();
@@ -29,30 +30,38 @@ public:
   SPSCQueue(const SPSCQueue &) = delete;
   SPSCQueue &operator=(const SPSCQueue &) = delete;
 
-  std::size_t size() const noexcept { return writeIdx_ - readIdx_; }
-  bool empty() const noexcept { return size() == 0; }
-  std::size_t capacity() const noexcept { return writeIdx_ == readIdx_; }
-  bool full() const noexcept { return size() == capacity(); }
+  std::size_t size() const noexcept {
+    return writeIdx_.load(std::memory_order_acquire) -
+           readIdx_.load(std::memory_order_acquire);
+  }
+  bool empty() const noexcept {
+    return writeIdx_.load(std::memory_order_acquire) ==
+           readIdx_.load(std::memory_order_acquire);
+  }
+  std::size_t capacity() const noexcept { return capacity_; }
+  bool full() const noexcept { return size() == capacity_; }
 
   const T *front() const noexcept {
     if (empty())
       return nullptr;
 
-    return &buff_[readIdx_ & mask_];
+    return &buff_[readIdx_.load(std::memory_order_acquire) & mask_];
   }
 
   bool push(const T &val) noexcept {
     if (full())
       return false;
-    std::memcpy(&buff_[writeIdx_ & mask_], &val, sizeof(T));
-    ++writeIdx_;
+    std::size_t w = writeIdx_.load(std::memory_order_acquire);
+    std::memcpy(&buff_[w & mask_], &val, sizeof(T));
+    writeIdx_.store(w + 1, std::memory_order_release);
     return true;
   }
 
   bool pop() noexcept {
     if (empty())
       return false;
-    ++readIdx_;
+    std::size_t r = readIdx_.load(std::memory_order_relaxed);
+    readIdx_.store(r + 1, std::memory_order_release);
     return true;
   }
 
@@ -64,6 +73,6 @@ private:
 
   T *buff_;
 
-  std::size_t writeIdx_{};
-  std::size_t readIdx_{};
+  std::atomic_size_t writeIdx_{};
+  std::atomic_size_t readIdx_{};
 };
