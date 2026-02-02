@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 
 add_executable(driver ./main.cpp)
+target_link_libraries(driver PRIVATE spscqueue)
 
 add_library(spscqueue INTERFACE)
 target_include_directories(spscqueue INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/spsc-queue)
