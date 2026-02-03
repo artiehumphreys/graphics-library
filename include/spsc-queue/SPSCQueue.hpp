@@ -30,38 +30,49 @@ public:
   SPSCQueue(const SPSCQueue &) = delete;
   SPSCQueue &operator=(const SPSCQueue &) = delete;
 
-  std::size_t size() const noexcept {
-    return writeIdx_.load(std::memory_order_acquire) -
-           readIdx_.load(std::memory_order_acquire);
-  }
   bool empty() const noexcept {
     return writeIdx_.load(std::memory_order_acquire) ==
            readIdx_.load(std::memory_order_acquire);
   }
-  std::size_t capacity() const noexcept { return capacity_; }
+
+  std::size_t size() const noexcept {
+    return writeIdx_.load(std::memory_order_acquire) -
+           readIdx_.load(std::memory_order_acquire);
+  }
+
   bool full() const noexcept { return size() == capacity_; }
 
   const T *front() const noexcept {
-    if (empty())
+    std::size_t writeIdx = writeIdx_.load(std::memory_order_acquire);
+    std::size_t readIdx = readIdx_.load(std::memory_order_relaxed);
+
+    if (empty(readIdx, writeIdx))
       return nullptr;
 
-    return &buff_[readIdx_.load(std::memory_order_acquire) & mask_];
+    return &buff_[readIdx & mask_];
   }
 
   bool push(const T &val) noexcept {
-    if (full())
+    // relaxed memory ordering for variable that the thread owns
+    std::size_t writeIdx = writeIdx_.load(std::memory_order_relaxed);
+    std::size_t readIdx = readIdx_.load(std::memory_order_acquire);
+
+    if (full(readIdx, writeIdx))
       return false;
-    std::size_t w = writeIdx_.load(std::memory_order_acquire);
-    std::memcpy(&buff_[w & mask_], &val, sizeof(T));
-    writeIdx_.store(w + 1, std::memory_order_release);
+
+    std::memcpy(&buff_[writeIdx & mask_], &val, sizeof(T));
+    writeIdx_.store(writeIdx + 1, std::memory_order_release);
     return true;
   }
 
   bool pop() noexcept {
-    if (empty())
+    std::size_t writeIdx = writeIdx_.load(std::memory_order_acquire);
+    std::size_t readIdx = readIdx_.load(std::memory_order_relaxed);
+
+    if (empty(readIdx, writeIdx))
       return false;
-    std::size_t r = readIdx_.load(std::memory_order_relaxed);
-    readIdx_.store(r + 1, std::memory_order_release);
+
+    readIdx_.store(readIdx + 1, std::memory_order_release);
     return true;
   }
 
@@ -75,4 +86,23 @@ private:
 
   std::atomic_size_t writeIdx_{};
   std::atomic_size_t readIdx_{};
+
+  // setup for preventing false sharing
+  //  alignas(std::hardware_destructive_interference_size) std::atomic_size_t
+  //  writeIdx_{};
+  // alignas(std::hardware_destructive_interference_size) std::atomic_size_t
+  // readIdx_{};
+  // char padding_[std::hardware_destructive_interference_size -
+  // sizeof(std::atomic_size_t)]
+
+  static std::size_t size(std::size_t tail, std::size_t head) noexcept {
+    return head - tail;
+  }
+  static bool empty(std::size_t tail, std::size_t head) noexcept {
+    return head == tail;
+  }
+  std::size_t capacity() const noexcept { return capacity_; }
+  bool full(std::size_t tail, std::size_t head) const noexcept {
+    return size(tail, head) == capacity_;
+  }
 };
