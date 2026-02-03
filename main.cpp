@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <thread>
 
-std::atomic<long long> total_ops{};
 SPSCQueue<std::size_t> q;
 
 void worker(std::size_t ops) {

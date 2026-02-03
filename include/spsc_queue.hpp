@@ -117,10 +117,13 @@ private:
   static std::size_t size(std::size_t tail, std::size_t head) noexcept {
     return head - tail;
   }
+
   static bool empty(std::size_t tail, std::size_t head) noexcept {
     return head == tail;
   }
+
   std::size_t capacity() const noexcept { return capacity_; }
+
   bool full(std::size_t tail, std::size_t head) const noexcept {
     return size(tail, head) == capacity_;
   }
