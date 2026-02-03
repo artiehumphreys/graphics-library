@@ -1,3 +1,6 @@
+.cache/clangd/*
+build/
+*.DS_Store
 # Prerequisites
 *.d
 
