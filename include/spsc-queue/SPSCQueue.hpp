@@ -5,6 +5,7 @@
 #include <cstring>
 #include <exception>
 #include <memory>
+#include <type_traits>
 
 template <typename T, typename Alloc = std::allocator<T>> class SPSCQueue {
 
@@ -15,6 +16,11 @@ public:
         allocator_(allocator),
         buff_(std::allocator_traits<Alloc>::allocate(allocator_, capacity_)) {
     static_assert(std::atomic_size_t::is_always_lock_free);
+
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "T must be trivially copyable for memcpy to avoid undefined "
+                  "behavior (possible dangling pointer)");
+
     if (capacity_ == 0 || (capacity_ & (capacity_ - 1)) != 0) {
       // TODO: handle gracefully
       std::terminate();
