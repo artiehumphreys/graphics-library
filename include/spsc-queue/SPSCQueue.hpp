@@ -5,6 +5,7 @@
 #include <cstring>
 #include <exception>
 #include <memory>
+#include <new>
 #include <type_traits>
 
 template <typename T, typename Alloc = std::allocator<T>> class SPSCQueue {
@@ -61,10 +62,12 @@ public:
   bool push(const T &val) noexcept {
     // relaxed memory ordering for variable that the thread owns
     std::size_t writeIdx = writeIdx_.load(std::memory_order_relaxed);
-    std::size_t readIdx = readIdx_.load(std::memory_order_acquire);
-
-    if (full(readIdx, writeIdx))
-      return false;
+    if (full(cachedReadIdx_, writeIdx)) {
+      cachedReadIdx_ = readIdx_.load(std::memory_order_acquire);
+      if (full(cachedReadIdx_, writeIdx)) {
+        return false;
+      }
+    }
 
     std::memcpy(&buff_[writeIdx & mask_], &val, sizeof(T));
     writeIdx_.store(writeIdx + 1, std::memory_order_release);
@@ -72,11 +75,13 @@ public:
   }
 
   bool pop() noexcept {
-    std::size_t writeIdx = writeIdx_.load(std::memory_order_acquire);
     std::size_t readIdx = readIdx_.load(std::memory_order_relaxed);
-
-    if (empty(readIdx, writeIdx))
-      return false;
+    if (empty(readIdx, cachedWriteIdx_)) {
+      cachedWriteIdx_ = writeIdx_.load(std::memory_order_acquire);
+      if (empty(readIdx, cachedWriteIdx_)) {
+        return false;
+      }
+    }
 
     readIdx_.store(readIdx + 1, std::memory_order_release);
     return true;
@@ -90,16 +95,24 @@ private:
 
   T *buff_;
 
-  std::atomic_size_t writeIdx_{};
-  std::atomic_size_t readIdx_{};
-
   // setup for preventing false sharing
-  //  alignas(std::hardware_destructive_interference_size) std::atomic_size_t
-  //  writeIdx_{};
-  // alignas(std::hardware_destructive_interference_size) std::atomic_size_t
-  // readIdx_{};
-  // char padding_[std::hardware_destructive_interference_size -
-  // sizeof(std::atomic_size_t)]
+  alignas(std::hardware_destructive_interference_size)
+      std::atomic_size_t writeIdx_{};
+
+  // exclusive to consumer thread
+  // cache variables for a lower bound for respective indices
+  alignas(std::hardware_destructive_interference_size) std::size_t
+      cachedWriteIdx_{};
+
+  alignas(std::hardware_destructive_interference_size)
+      std::atomic_size_t readIdx_{};
+
+  // exclusive to producer thread
+  alignas(std::hardware_destructive_interference_size) std::size_t
+      cachedReadIdx_{};
+
+  char padding_[std::hardware_destructive_interference_size -
+                sizeof(std::atomic_size_t)];
 
   static std::size_t size(std::size_t tail, std::size_t head) noexcept {
     return head - tail;
