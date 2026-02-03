@@ -1,4 +1,5 @@
-#include "SPSCQueue.hpp"
+#include "command.hpp"
+#include "spsc_queue.hpp"
 #include <cassert>
 #include <thread>
 
@@ -34,12 +35,15 @@ int test_multiple_push_pop() {
 }
 
 int test_threaded_push_pop() {
-  SPSCQueue<int> q;
+  SPSCQueue<Command> q;
   constexpr int num_tests = 1u << 16;
 
   std::thread push_thread([&] {
     for (int i = 1; i <= num_tests;) {
-      if (q.push(i)) {
+      Command c{};
+      c.op = Operation::CreateShape;
+      c.create = {Shape::Circle, static_cast<float>(i), static_cast<float>(i)};
+      if (q.push(c)) {
         ++i;
       }
     }
@@ -48,11 +52,10 @@ int test_threaded_push_pop() {
   std::thread pop_thread([&] {
     int expected = 1;
     while (expected <= num_tests) {
-      if (const int *p = q.front()) {
-        int got = *p;
+      if (const Command *cmd = q.front()) {
+        assert(cmd->op == Operation::CreateShape);
+        assert(cmd->create.x == static_cast<float>(expected));
         assert(q.pop());
-
-        assert(got == expected);
         ++expected;
       }
     }

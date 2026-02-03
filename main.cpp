@@ -1,4 +1,4 @@
-#include "SPSCQueue.hpp"
+#include "spsc_queue.hpp"
 #include <chrono>
 #include <cstddef>
 #include <thread>
