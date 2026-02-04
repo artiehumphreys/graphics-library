@@ -11,10 +11,20 @@ enable_testing()
 add_library(core INTERFACE)
 target_include_directories(core INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+add_library(window src/platform/macos/window.mm)
+target_include_directories(window PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(window PRIVATE "-framework Cocoa")
+set_source_files_properties(src/platform/macos/window.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+
 # Main executable
 add_executable(driver ./main.cpp)
 target_compile_options(driver PRIVATE -O3 -Wall -Wpedantic -Werror -Wextra)
 target_link_libraries(driver PRIVATE core)
+
+# Graphics demo
+add_executable(graphics_demo src/demo.cpp)
+target_compile_options(graphics_demo PRIVATE -O3 -Wall -Wpedantic -Werror -Wextra)
+target_link_libraries(graphics_demo PRIVATE core window "-framework CoreGraphics")
 
 # Tests
 add_executable(test_spsc_queue tests/test_spsc_queue.cpp)
