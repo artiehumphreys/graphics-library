@@ -1,3 +1,4 @@
+*.swp
 .cache/clangd/*
 build/
 *.DS_Store
