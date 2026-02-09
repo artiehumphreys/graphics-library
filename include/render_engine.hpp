@@ -1,6 +1,7 @@
 #pragma once
 
 #include "command.hpp"
+#include "draw_context.hpp"
 #include "spsc_queue.hpp"
 #include "window.hpp"
 #include <cstddef>
@@ -27,12 +28,16 @@ public:
       const Command *c = consumer_.front();
       switch (c->op) {
       case Operation::Clear:
+        clear();
         break;
       case Operation::CreateShape:
+        createShape(c->create);
         break;
       case Operation::MoveShape:
+        moveShape(c->move);
         break;
       case Operation::DeleteShape:
+        deleteShape(c->remove);
         break;
       default:
         break;
@@ -42,15 +47,20 @@ public:
     draw();
   }
 
+  auto findShapeById(uint32_t id) {
+    auto it = std::find_if(shapes_.begin(), shapes_.end(),
+                           [id](const ShapeInstance &s) { return s.id == id; });
+    return it;
+  }
+
   void clear() { shapes_.clear(); }
 
   void createShape(const CreateData &data) {
     shapes_.push_back({shape_id++, data.shape, data.x, data.y});
   }
 
-  void deleteShape(uint32_t id) {
-    auto it = std::find_if(shapes_.begin(), shapes_.end(),
-                           [id](const ShapeInstance &s) { return s.id == id; });
+  void deleteShape(const RemoveData &data) {
+    auto it = findShapeById(data.id);
     if (it != shapes_.end()) {
       std::swap(*it, shapes_.back());
       shapes_.pop_back();
@@ -58,17 +68,35 @@ public:
   }
 
   void moveShape(const MoveData &data) {
-    auto it =
-        std::find_if(shapes_.begin(), shapes_.end(),
-                     [&](const ShapeInstance &s) { return s.id == data.id; });
-
+    auto it = findShapeById(data.id);
     if (it != shapes_.end()) {
       it->x = data.x;
       it->y = data.y;
     }
   }
 
-  void draw();
+  void draw() {
+    window_->setDrawCallback([this](void *ctx, float /*w*/, float /*h*/) {
+      DrawContext dc(ctx);
+      dc.clear(1, 1, 1);
+      for (auto &s : shapes_) {
+        dc.setFillColor(1, 0, 0, 1);
+        switch (s.shape) {
+        case Shape::Circle:
+          dc.fillCircle(s.x, s.y, 25);
+          break;
+        case Shape::Rectangle:
+          dc.fillRect(s.x, s.y, 50, 50);
+          break;
+        case Shape::Triangle:
+          dc.fillTriangle(s.x, s.y - 25, s.x - 25, s.y + 25, s.x + 25,
+                          s.y + 25);
+          break;
+        }
+      }
+    });
+    window_->requestRedraw();
+  }
 
 private:
   uint32_t width_, height_;
