@@ -16,9 +16,9 @@ struct ShapeInstance {
 
 class RenderEngine {
 public:
-  RenderEngine(Window *window, SPSCQueue<Command>::ConsumerHandle consumer)
+  RenderEngine(Window &window, SPSCQueue<Command>::ConsumerHandle consumer)
       : window_(window), consumer_(consumer) {
-    window_->setDrawCallback([this](void *ctx, float /*w*/, float /*h*/) {
+    window_.setDrawCallback([this](void *ctx, float /*w*/, float /*h*/) {
       DrawContext dc(ctx);
       dc.clear(1, 1, 1);
       for (const auto &s : shapes_) {
@@ -91,7 +91,7 @@ public:
   }
 
 private:
-  Window *window_;
+  Window &window_;
   SPSCQueue<Command>::ConsumerHandle consumer_;
   // start with naive approach
   std::vector<ShapeInstance> shapes_;

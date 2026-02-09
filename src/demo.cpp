@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
-#include <cstdio>
 #include <thread>
 
 int main() {
@@ -19,7 +18,7 @@ int main() {
   auto consumer = commandBuffer.consumer();
 
   InputHandler inputHandler{std::move(producer)};
-  RenderEngine renderEngine{&window, std::move(consumer)};
+  RenderEngine renderEngine{window, std::move(consumer)};
 
   std::atomic_bool done{false};
 
@@ -33,8 +32,10 @@ int main() {
   });
 
   window.setMouseCallback([&](const MouseEvent &e) {
-    inputHandler.handleClick(e.x, e.y);
-    window.requestRedraw();
+    if (e.pressed) {
+      inputHandler.handleClick(e.x, e.y);
+      window.requestRedraw();
+    }
   });
 
   std::thread render([&] {
