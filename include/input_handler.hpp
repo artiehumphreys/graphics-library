@@ -24,15 +24,26 @@ public:
       break;
     case KeyCode::Delete:
       activeOp_ = Operation::DeleteShape;
+      break;
     default:
       break;
     }
   }
 
   void handleClick(float x, float y) {
-    Command c = Command{Operation::CreateShape,
-                        {CreateData{activeShape_, x, y, activeSize_}}};
-
+    Command c;
+    switch (activeOp_) {
+    case Operation::CreateShape:
+      c.op = Operation::CreateShape;
+      c.create = CreateData{activeShape_, x, y, activeSize_};
+      break;
+    case Operation::DeleteShape:
+      c.op = Operation::ClickAt;
+      c.click = ClickData{x, y};
+      break;
+    default:
+      return;
+    }
     q_.push(c);
   }
 

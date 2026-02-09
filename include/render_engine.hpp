@@ -56,6 +56,13 @@ public:
       case Operation::DeleteShape:
         deleteShape(c->remove);
         break;
+      case Operation::ClickAt: {
+        auto id = shapeAt(c->click.x, c->click.y);
+        if (id.has_value()) {
+          deleteShape(RemoveData{id.value()});
+        }
+        break;
+      }
       default:
         break;
       }
