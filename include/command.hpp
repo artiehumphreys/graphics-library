@@ -2,13 +2,13 @@
 
 #include <cstdint>
 
-enum class Operation { CreateShape, MoveShape, DeleteShape, Clear };
+enum class Operation { ClickAt, CreateShape, MoveShape, DeleteShape, Clear };
 
 enum class Shape { Circle, Rectangle, Triangle };
 
 struct CreateData {
   Shape shape;
-  float x, y;
+  float x, y, size;
 };
 
 struct MoveData {
@@ -20,11 +20,16 @@ struct RemoveData {
   uint32_t id;
 };
 
+struct ClickData {
+  float x, y;
+};
+
 struct Command {
   Operation op;
   union {
     CreateData create;
     MoveData move;
     RemoveData remove;
+    ClickData click;
   };
 };
