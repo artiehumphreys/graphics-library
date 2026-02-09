@@ -22,6 +22,11 @@ public:
     window_.setDrawCallback([this](void *ctx, float /*w*/, float /*h*/) {
       DrawContext dc(ctx);
       dc.clear(1, 1, 1);
+
+      dc.setFillColor(0, 0, 0, 1);
+      dc.drawText(
+          "C - Circle, R - Rect, T - Triangle, Del - Delete, Esc - Quit", 10,
+          10, 14);
       for (const auto &s : shapes_) {
         dc.setFillColor(1, 0, 0, 1);
         switch (s.shape) {

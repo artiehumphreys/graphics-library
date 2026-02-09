@@ -18,7 +18,7 @@ set_source_files_properties(src/platform/macos/window.mm PROPERTIES COMPILE_FLAG
 
 add_library(draw_context src/platform/macos/draw_context.mm)
 target_include_directories(draw_context PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(draw_context PRIVATE "-framework CoreGraphics")
+target_link_libraries(draw_context PRIVATE "-framework CoreGraphics" "-framework CoreText" "-framework CoreFoundation")
 set_source_files_properties(src/platform/macos/draw_context.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 
 # Main executable

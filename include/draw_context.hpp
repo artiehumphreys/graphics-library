@@ -10,6 +10,7 @@ public:
   void fillCircle(float cx, float cy, float radius);
   void fillTriangle(float x1, float y1, float x2, float y2, float x3,
                     float y3);
+  void drawText(const char *text, float x, float y, float fontSize);
 
 private:
   void *ctx_;

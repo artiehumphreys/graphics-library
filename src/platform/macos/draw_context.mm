@@ -1,5 +1,7 @@
 #include "draw_context.hpp"
-#include <CoreGraphics/CoreGraphics.h>
+#import <CoreFoundation/CoreFoundation.h>
+#import <CoreGraphics/CoreGraphics.h>
+#import <CoreText/CoreText.h>
 
 DrawContext::DrawContext(void *nativeCtx) : ctx_(nativeCtx) {}
 
@@ -34,4 +36,38 @@ void DrawContext::fillTriangle(float x1, float y1, float x2, float y2,
   CGContextAddLineToPoint(gc, x3, y3);
   CGContextClosePath(gc);
   CGContextFillPath(gc);
+}
+
+void DrawContext::drawText(const char *text, float x, float y,
+                           float fontSize) {
+  auto *gc = static_cast<CGContextRef>(ctx_);
+
+  CFStringRef str =
+      CFStringCreateWithCString(kCFAllocatorDefault, text, kCFStringEncodingUTF8);
+  CTFontRef font = CTFontCreateWithName(CFSTR("Helvetica"), fontSize, nullptr);
+
+  CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorFromContextAttributeName};
+  CFTypeRef values[] = {font, kCFBooleanTrue};
+  CFDictionaryRef attrs =
+      CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys,
+                         (const void **)values, 2,
+                         &kCFTypeDictionaryKeyCallBacks,
+                         &kCFTypeDictionaryValueCallBacks);
+
+  CFAttributedStringRef attrStr =
+      CFAttributedStringCreate(kCFAllocatorDefault, str, attrs);
+  CTLineRef line = CTLineCreateWithAttributedString(attrStr);
+
+  CGContextSaveGState(gc);
+  CGContextTranslateCTM(gc, x, y + fontSize);
+  CGContextScaleCTM(gc, 1.0, -1.0);
+  CGContextSetTextPosition(gc, 0, 0);
+  CTLineDraw(line, gc);
+  CGContextRestoreGState(gc);
+
+  CFRelease(line);
+  CFRelease(attrStr);
+  CFRelease(attrs);
+  CFRelease(font);
+  CFRelease(str);
 }
