@@ -6,7 +6,6 @@
 #include "window.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <utility>
 
 struct ShapeInstance {
@@ -17,11 +16,28 @@ struct ShapeInstance {
 
 class RenderEngine {
 public:
-  RenderEngine(uint32_t width, uint32_t height, const char *title,
-               SPSCQueue<Command>::ConsumerHandle &consumer)
-      : width_(width), height_(height),
-        window_(std::make_unique<Window>(width_, height_, title)),
-        consumer_(consumer) {}
+  RenderEngine(Window *window, SPSCQueue<Command>::ConsumerHandle consumer)
+      : window_(window), consumer_(consumer) {
+    window_->setDrawCallback([this](void *ctx, float /*w*/, float /*h*/) {
+      DrawContext dc(ctx);
+      dc.clear(1, 1, 1);
+      for (const auto &s : shapes_) {
+        dc.setFillColor(1, 0, 0, 1);
+        switch (s.shape) {
+        case Shape::Circle:
+          dc.fillCircle(s.x, s.y, 25);
+          break;
+        case Shape::Rectangle:
+          dc.fillRect(s.x, s.y, 50, 50);
+          break;
+        case Shape::Triangle:
+          dc.fillTriangle(s.x, s.y - 25, s.x - 25, s.y + 25, s.x + 25,
+                          s.y + 25);
+          break;
+        }
+      }
+    });
+  }
 
   void run() {
     while (consumer_.front() != nullptr) {
@@ -44,7 +60,6 @@ public:
       }
       consumer_.pop();
     }
-    draw();
   }
 
   auto findShapeById(uint32_t id) {
@@ -75,32 +90,8 @@ public:
     }
   }
 
-  void draw() {
-    window_->setDrawCallback([this](void *ctx, float /*w*/, float /*h*/) {
-      DrawContext dc(ctx);
-      dc.clear(1, 1, 1);
-      for (auto &s : shapes_) {
-        dc.setFillColor(1, 0, 0, 1);
-        switch (s.shape) {
-        case Shape::Circle:
-          dc.fillCircle(s.x, s.y, 25);
-          break;
-        case Shape::Rectangle:
-          dc.fillRect(s.x, s.y, 50, 50);
-          break;
-        case Shape::Triangle:
-          dc.fillTriangle(s.x, s.y - 25, s.x - 25, s.y + 25, s.x + 25,
-                          s.y + 25);
-          break;
-        }
-      }
-    });
-    window_->requestRedraw();
-  }
-
 private:
-  uint32_t width_, height_;
-  std::unique_ptr<Window> window_;
+  Window *window_;
   SPSCQueue<Command>::ConsumerHandle consumer_;
   // start with naive approach
   std::vector<ShapeInstance> shapes_;
