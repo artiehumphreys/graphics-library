@@ -1,5 +1,5 @@
+#include "draw_context.hpp"
 #include "window.hpp"
-#include <CoreGraphics/CoreGraphics.h>
 #include <cstdio>
 
 int main() {
@@ -17,20 +17,15 @@ int main() {
     }
   });
 
-  window.setDrawCallback([](void *ctx, float width, float height) {
-    auto *cgCtx = static_cast<CGContextRef>(ctx);
+  window.setDrawCallback([](void *ctx, float /*width*/, float /*height*/) {
+    DrawContext dc(ctx);
+    dc.clear(1, 1, 1);
 
-    // Clear background to white
-    CGContextSetRGBFillColor(cgCtx, 1.0, 1.0, 1.0, 1.0);
-    CGContextFillRect(cgCtx, CGRectMake(0, 0, width, height));
+    dc.setFillColor(1, 0, 0, 1);
+    dc.fillCircle(150, 150, 50);
 
-    // Draw a red circle
-    CGContextSetRGBFillColor(cgCtx, 1.0, 0.0, 0.0, 1.0);
-    CGContextFillEllipseInRect(cgCtx, CGRectMake(100, 100, 100, 100));
-
-    // Draw a blue rectangle
-    CGContextSetRGBFillColor(cgCtx, 0.0, 0.0, 1.0, 1.0);
-    CGContextFillRect(cgCtx, CGRectMake(300, 200, 150, 100));
+    dc.setFillColor(0, 0, 1, 1);
+    dc.fillRect(300, 200, 150, 100);
   });
 
   window.run();

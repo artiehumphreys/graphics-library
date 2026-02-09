@@ -87,6 +87,32 @@ public:
     return true;
   }
 
+  class ProducerHandle {
+  public:
+    bool push(const T &val) noexcept { return q_->push(val); }
+
+  private:
+    friend class SPSCQueue;
+    SPSCQueue *q_;
+
+    explicit ProducerHandle(SPSCQueue *q) : q_(q) {}
+  };
+
+  class ConsumerHandle {
+  public:
+    bool pop() noexcept { return q_->pop(); }
+    const T *front() noexcept { return q_->front(); }
+
+  private:
+    friend class SPSCQueue;
+    SPSCQueue *q_;
+
+    explicit ConsumerHandle(SPSCQueue *q) : q_(q) {}
+  };
+
+  ProducerHandle producer() { return ProducerHandle(this); }
+  ConsumerHandle consumer() { return ConsumerHandle(this); }
+
 private:
   // power of two capacity for easy modulo calculation
   std::size_t capacity_;
