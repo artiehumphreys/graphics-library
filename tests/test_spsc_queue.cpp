@@ -42,7 +42,8 @@ int test_threaded_push_pop() {
     for (int i = 1; i <= num_tests;) {
       Command c{};
       c.op = Operation::CreateShape;
-      c.create = {Shape::Circle, static_cast<float>(i), static_cast<float>(i)};
+      c.create = {Shape::Circle, static_cast<float>(i), static_cast<float>(i),
+                  static_cast<float>(i)};
       if (q.push(c)) {
         ++i;
       }

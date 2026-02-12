@@ -1,33 +1,51 @@
-#include "draw_context.hpp"
+#include "command.hpp"
+#include "input_handler.hpp"
+#include "render_engine.hpp"
+#include "spsc_queue.hpp"
 #include "window.hpp"
-#include <cstdio>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <thread>
 
 int main() {
-  Window window(800, 600, "Graphics Demo");
+  uint32_t width = 800, height = 600;
+  const char *title = "Graphics Demo";
+  Window window(width, height, title);
+
+  SPSCQueue<Command> commandBuffer;
+  auto producer = commandBuffer.producer();
+  auto consumer = commandBuffer.consumer();
+
+  InputHandler inputHandler{std::move(producer)};
+  RenderEngine renderEngine{window, std::move(consumer)};
+
+  std::atomic_bool done{false};
 
   window.setKeyCallback([&](const KeyEvent &e) {
     if (e.pressed && e.key == KeyCode::Escape) {
+      done.exchange(true, std::memory_order_relaxed);
       window.close();
     }
+
+    inputHandler.handleKeyPress(e.key);
   });
 
   window.setMouseCallback([&](const MouseEvent &e) {
     if (e.pressed) {
-      std::printf("Mouse click at (%.1f, %.1f)\n", e.x, e.y);
+      inputHandler.handleClick(e.x, e.y);
+      window.requestRedraw();
     }
   });
 
-  window.setDrawCallback([](void *ctx, float /*width*/, float /*height*/) {
-    DrawContext dc(ctx);
-    dc.clear(1, 1, 1);
-
-    dc.setFillColor(1, 0, 0, 1);
-    dc.fillCircle(150, 150, 50);
-
-    dc.setFillColor(0, 0, 1, 1);
-    dc.fillRect(300, 200, 150, 100);
+  std::thread render([&] {
+    while (!done) {
+      renderEngine.run();
+    }
   });
 
   window.run();
+
+  render.join();
   return 0;
 }
