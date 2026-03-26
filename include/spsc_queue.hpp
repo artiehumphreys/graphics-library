@@ -127,15 +127,13 @@ private:
 
   // exclusive to consumer thread
   // cache variables for a lower bound for respective indices
-  alignas(std::hardware_destructive_interference_size) std::size_t
-      cachedWriteIdx_{};
+  std::size_t cachedWriteIdx_{};
 
   alignas(std::hardware_destructive_interference_size)
       std::atomic_size_t readIdx_{};
 
   // exclusive to producer thread
-  alignas(std::hardware_destructive_interference_size) std::size_t
-      cachedReadIdx_{};
+  std::size_t cachedReadIdx_{};
 
   char padding_[std::hardware_destructive_interference_size -
                 sizeof(std::size_t)];
