@@ -127,6 +127,9 @@ public:
   class ProducerHandle {
   public:
     bool push(const T &val) noexcept { return q_->push(val); }
+    std::size_t push_batch(std::span<const T> data) noexcept {
+      return q_->push_batch(data);
+    }
 
   private:
     friend class SPSCQueue;
@@ -138,6 +141,9 @@ public:
   class ConsumerHandle {
   public:
     bool pop() noexcept { return q_->pop(); }
+    std::size_t pop_batch(std::size_t count) noexcept {
+      return q_->pop_batch(count);
+    }
     const T *front() noexcept { return q_->front(); }
 
   private:
