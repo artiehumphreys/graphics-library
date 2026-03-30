@@ -87,9 +87,9 @@ public:
         return 0;
     }
 
-    std::size_t n = std::max(available, data.size());
-    for (int i = 0; i < n; ++i) {
-      std::memcpy(&buff_[writeIdx & mask_], &data[i], sizeof(T));
+    std::size_t n = std::min(available, data.size());
+    for (std::size_t i = 0; i < n; ++i) {
+      std::memcpy(&buff_[(writeIdx + i) & mask_], &data[i], sizeof(T));
     }
     writeIdx_.store(writeIdx + n, std::memory_order_release);
     return n;
@@ -119,7 +119,7 @@ public:
         return 0;
     }
 
-    std::size_t n = std::max(available, count);
+    std::size_t n = std::min(available, count);
     readIdx_.store(readIdx + n, std::memory_order_release);
     return n;
   }
