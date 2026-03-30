@@ -27,6 +27,7 @@ struct MouseEvent {
   float x, y;
   MouseButton button;
   bool pressed;
+  bool shiftHeld;
 };
 
 struct MouseMoveEvent {

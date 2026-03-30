@@ -3,11 +3,11 @@
 #include "command.hpp"
 #include "draw_context.hpp"
 #include "spsc_queue.hpp"
-#include "window.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <vector>
 
 struct ShapeInstance {
   uint32_t id;
@@ -126,7 +126,6 @@ public:
   }
 
   std::optional<uint32_t> shapeAt(float x, float y) {
-    // return first shape found -> most recent
     for (auto rit = shapes_.rbegin(); rit != shapes_.rend(); ++rit) {
       const auto &s = *rit;
       bool hit = false;
@@ -150,7 +149,6 @@ public:
 private:
   Window &window_;
   SPSCQueue<Command>::ConsumerHandle consumer_;
-  // start with naive approach
   std::vector<ShapeInstance> shapes_;
   uint32_t shape_id = 0;
 };
