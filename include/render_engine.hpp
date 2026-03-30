@@ -3,6 +3,7 @@
 #include "command.hpp"
 #include "draw_context.hpp"
 #include "spsc_queue.hpp"
+#include "window.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -98,8 +99,8 @@ public:
   void moveShape(const MoveData &data) {
     auto it = findShapeById(data.id);
     if (it != shapes_.end()) {
-      it->x = data.x;
-      it->y = data.y;
+      it->x += data.x;
+      it->y += data.y;
     }
   }
 
