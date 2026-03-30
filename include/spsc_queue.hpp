@@ -1,11 +1,13 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstring>
 #include <exception>
 #include <memory>
 #include <new>
+#include <span>
 #include <type_traits>
 
 template <typename T, typename Alloc = std::allocator<T>> class SPSCQueue {
@@ -74,6 +76,25 @@ public:
     return true;
   }
 
+  std::size_t push_batch(std::span<const T> data) noexcept {
+    std::size_t writeIdx = writeIdx_.load(std::memory_order_relaxed);
+
+    std::size_t available = capacity_ - size(cachedReadIdx_, writeIdx);
+    if (available < data.size()) {
+      cachedReadIdx_ = readIdx_.load(std::memory_order_acquire);
+      available = capacity_ - size(cachedReadIdx_, writeIdx);
+      if (available == 0)
+        return 0;
+    }
+
+    std::size_t n = std::max(available, data.size());
+    for (int i = 0; i < n; ++i) {
+      std::memcpy(&buff_[writeIdx & mask_], &data[i], sizeof(T));
+    }
+    writeIdx_.store(writeIdx + n, std::memory_order_release);
+    return n;
+  }
+
   bool pop() noexcept {
     std::size_t readIdx = readIdx_.load(std::memory_order_relaxed);
     if (empty(readIdx, cachedWriteIdx_)) {
@@ -85,6 +106,22 @@ public:
 
     readIdx_.store(readIdx + 1, std::memory_order_release);
     return true;
+  }
+
+  std::size_t pop_batch(std::size_t count) {
+    std::size_t readIdx = readIdx_.load(std::memory_order_relaxed);
+
+    std::size_t available = size(cachedWriteIdx_, readIdx);
+    if (available < count) {
+      cachedWriteIdx_ = writeIdx_.load(std::memory_order_acquire);
+      available = size(cachedWriteIdx_, readIdx);
+      if (available == 0)
+        return 0;
+    }
+
+    std::size_t n = std::max(available, count);
+    readIdx_.store(readIdx + n, std::memory_order_release);
+    return n;
   }
 
   class ProducerHandle {
