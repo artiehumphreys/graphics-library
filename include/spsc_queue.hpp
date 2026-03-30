@@ -138,7 +138,7 @@ private:
       cachedReadIdx_{};
 
   char padding_[std::hardware_destructive_interference_size -
-                sizeof(std::atomic_size_t)];
+                sizeof(std::size_t)];
 
   static std::size_t size(std::size_t tail, std::size_t head) noexcept {
     return head - tail;
