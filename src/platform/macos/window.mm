@@ -86,7 +86,8 @@ static KeyCode translateKeyCode(unsigned short keyCode) {
 - (void)mouseDown:(NSEvent*)event {
   if (_callbacks->mouseCallback) {
     NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
-    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Left, true};
+    bool shift = (event.modifierFlags & NSEventModifierFlagShift) != 0;
+    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Left, true, shift};
     _callbacks->mouseCallback(e);
   }
 }
@@ -94,7 +95,8 @@ static KeyCode translateKeyCode(unsigned short keyCode) {
 - (void)mouseUp:(NSEvent*)event {
   if (_callbacks->mouseCallback) {
     NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
-    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Left, false};
+    bool shift = (event.modifierFlags & NSEventModifierFlagShift) != 0;
+    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Left, false, shift};
     _callbacks->mouseCallback(e);
   }
 }
@@ -102,7 +104,8 @@ static KeyCode translateKeyCode(unsigned short keyCode) {
 - (void)rightMouseDown:(NSEvent*)event {
   if (_callbacks->mouseCallback) {
     NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
-    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Right, true};
+    bool shift = (event.modifierFlags & NSEventModifierFlagShift) != 0;
+    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Right, true, shift};
     _callbacks->mouseCallback(e);
   }
 }
@@ -110,7 +113,8 @@ static KeyCode translateKeyCode(unsigned short keyCode) {
 - (void)rightMouseUp:(NSEvent*)event {
   if (_callbacks->mouseCallback) {
     NSPoint loc = [self convertPoint:event.locationInWindow fromView:nil];
-    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Right, false};
+    bool shift = (event.modifierFlags & NSEventModifierFlagShift) != 0;
+    MouseEvent e{static_cast<float>(loc.x), static_cast<float>(loc.y), MouseButton::Right, false, shift};
     _callbacks->mouseCallback(e);
   }
 }
