@@ -1,7 +1,10 @@
 #include "spsc_queue.hpp"
 #include <chrono>
 #include <cstddef>
+#include <span>
 #include <thread>
+
+#define BATCH_SIZE 64
 
 SPSCQueue<std::size_t> q;
 
@@ -19,10 +22,25 @@ void consumer(std::size_t ops) {
   }
 }
 
+void worker_batch(std::size_t ops) {
+  std::size_t buf[BATCH_SIZE];
+  std::memset(buf, 0, sizeof(buf));
+  std::size_t i = 0;
+  while (i < ops) {
+    std::size_t pushed = 0;
+    while (pushed < BATCH_SIZE) {
+      pushed += q.push_batch(std::span{buf + pushed, BATCH_SIZE - pushed});
+    }
+    i += BATCH_SIZE;
+  }
+}
+
 int main() {
   std::size_t ops_per_thread = 1u << 27; // approx 134 million ops
 
-  std::thread worker_thread(worker, ops_per_thread);
+  // flow that mimics the application: batch push, single pop to process
+  // commands one at a time
+  std::thread worker_thread(worker_batch, ops_per_thread);
   std::thread consumer_thread(consumer, ops_per_thread);
 
   auto start = std::chrono::high_resolution_clock::now();

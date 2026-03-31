@@ -1,11 +1,13 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstring>
 #include <exception>
 #include <memory>
 #include <new>
+#include <span>
 #include <type_traits>
 
 template <typename T, typename Alloc = std::allocator<T>> class SPSCQueue {
@@ -74,6 +76,25 @@ public:
     return true;
   }
 
+  std::size_t push_batch(std::span<const T> data) noexcept {
+    std::size_t writeIdx = writeIdx_.load(std::memory_order_relaxed);
+
+    std::size_t available = capacity_ - size(cachedReadIdx_, writeIdx);
+    if (available < data.size()) {
+      cachedReadIdx_ = readIdx_.load(std::memory_order_acquire);
+      available = capacity_ - size(cachedReadIdx_, writeIdx);
+      if (available == 0)
+        return 0;
+    }
+
+    std::size_t n = std::min(available, data.size());
+    for (std::size_t i = 0; i < n; ++i) {
+      std::memcpy(&buff_[(writeIdx + i) & mask_], &data[i], sizeof(T));
+    }
+    writeIdx_.store(writeIdx + n, std::memory_order_release);
+    return n;
+  }
+
   bool pop() noexcept {
     std::size_t readIdx = readIdx_.load(std::memory_order_relaxed);
     if (empty(readIdx, cachedWriteIdx_)) {
@@ -87,9 +108,28 @@ public:
     return true;
   }
 
+  std::size_t pop_batch(std::size_t count) {
+    std::size_t readIdx = readIdx_.load(std::memory_order_relaxed);
+
+    std::size_t available = size(cachedWriteIdx_, readIdx);
+    if (available < count) {
+      cachedWriteIdx_ = writeIdx_.load(std::memory_order_acquire);
+      available = size(cachedWriteIdx_, readIdx);
+      if (available == 0)
+        return 0;
+    }
+
+    std::size_t n = std::min(available, count);
+    readIdx_.store(readIdx + n, std::memory_order_release);
+    return n;
+  }
+
   class ProducerHandle {
   public:
     bool push(const T &val) noexcept { return q_->push(val); }
+    std::size_t push_batch(std::span<const T> data) noexcept {
+      return q_->push_batch(data);
+    }
 
   private:
     friend class SPSCQueue;
@@ -101,6 +141,9 @@ public:
   class ConsumerHandle {
   public:
     bool pop() noexcept { return q_->pop(); }
+    std::size_t pop_batch(std::size_t count) noexcept {
+      return q_->pop_batch(count);
+    }
     const T *front() noexcept { return q_->front(); }
 
   private:
@@ -127,15 +170,13 @@ private:
 
   // exclusive to consumer thread
   // cache variables for a lower bound for respective indices
-  alignas(std::hardware_destructive_interference_size) std::size_t
-      cachedWriteIdx_{};
+  std::size_t cachedWriteIdx_{};
 
   alignas(std::hardware_destructive_interference_size)
       std::atomic_size_t readIdx_{};
 
   // exclusive to producer thread
-  alignas(std::hardware_destructive_interference_size) std::size_t
-      cachedReadIdx_{};
+  std::size_t cachedReadIdx_{};
 
   char padding_[std::hardware_destructive_interference_size -
                 sizeof(std::size_t)];

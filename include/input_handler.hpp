@@ -3,6 +3,7 @@
 #include "command.hpp"
 #include "spsc_queue.hpp"
 #include "window.hpp"
+#include <span>
 
 class InputHandler {
 public:
@@ -45,6 +46,10 @@ public:
       return;
     }
     q_.push(c);
+  }
+
+  std::size_t pushBatch(std::span<const Command> data) noexcept {
+    return q_.push_batch(data);
   }
 
 private:
